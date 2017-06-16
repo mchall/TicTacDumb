@@ -160,6 +160,14 @@ namespace TicTacDumb
         {
             foreach (var move in history)
             {
+                var board = move.Board;
+                for (int i = 0; i < 4; i++)
+                {
+                    if (_memory.ContainsKey(move.Board))
+                        break;
+                    //board = FlipBoard(board);
+                }
+
                 if (!_memory.ContainsKey(move.Board))
                     _memory[move.Board] = new List<Move>();
 
@@ -310,17 +318,26 @@ namespace TicTacDumb
         {
             var newBoard = new char[3, 3];
 
-            newBoard[0, 0] = input[0, 2];
-            newBoard[0, 1] = input[1, 2];
-            newBoard[0, 2] = input[2, 2];
-            newBoard[1, 0] = input[0, 1];
+            newBoard[0, 0] = input[2, 0];
+            newBoard[0, 1] = input[1, 0];
+            newBoard[0, 2] = input[0, 0];
+            newBoard[1, 0] = input[2, 1];
             newBoard[1, 1] = input[1, 1];
-            newBoard[1, 2] = input[2, 1];
-            newBoard[2, 0] = input[0, 0];
-            newBoard[2, 1] = input[1, 0];
-            newBoard[2, 2] = input[2, 0];
+            newBoard[1, 2] = input[0, 1];
+            newBoard[2, 0] = input[2, 2];
+            newBoard[2, 1] = input[1, 2];
+            newBoard[2, 2] = input[0, 2];
 
             return newBoard;
+        }
+
+        private static string FlipBoard(string input)
+        {
+            string newString = "";
+            newString += $"{ input[2] }{ input[5] }{ input[8] }";
+            newString += $"{ input[1] }{ input[4] }{ input[7] }";
+            newString += $"{ input[0] }{ input[3] }{ input[6] }";
+            return newString;
         }
 
         private static bool AreEqual(char[,] left, char[,] right)
@@ -343,7 +360,7 @@ namespace TicTacDumb
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    result += board[i, j];
+                    result += board[j, i];
                 }
             }
             return result;
