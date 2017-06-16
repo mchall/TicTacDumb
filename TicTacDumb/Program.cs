@@ -70,14 +70,13 @@ namespace TicTacDumb
             int p1 = 0;
             int p2 = 0;
 
-
             for (int i = 0; i < totalGames; i++)
             {
                 var board = NewBoard();
 
                 while (true)
                 {
-                    NextMove(board, 'x', trainingPercentage: 1);
+                    NextMove(board, 'x', trainingPercentage: 0);
 
                     if (HasVictory(board, 'x'))
                     {
@@ -85,7 +84,7 @@ namespace TicTacDumb
                         break;
                     }
 
-                    NextMove(board, 'o', trainingPercentage: 0);
+                    NextMove(board, 'o', trainingPercentage: 1);
 
                     if (HasVictory(board, 'o'))
                     {
@@ -109,7 +108,7 @@ namespace TicTacDumb
 
         private static void Train()
         {
-            int totalGames = 10000000;
+            int totalGames = 1000000;
 
             for (int i = 0; i < totalGames; i++)
             {
@@ -174,6 +173,8 @@ namespace TicTacDumb
 
                 var isLastMove = move == history.Last();
 
+                //todo: if last move already negative, need to go back 1 (if all paths negative, mark path as bad??)
+
                 int scoreAlteration = 0;
                 switch (outcome)
                 {
@@ -221,13 +222,13 @@ namespace TicTacDumb
             {
                 List<Move> moves = new List<Move>();
 
-                for (int i = 0; i < 3; i++)
+                for (int x = 0; x < 3; x++)
                 {
-                    for (int j = 0; j < 3; j++)
+                    for (int y = 0; y < 3; y++)
                     {
-                        if (board[i, j] == '-')
+                        if (board[y, x] == '-')
                         {
-                            moves.Add(new Move() { X = j, Y = i });
+                            moves.Add(new Move() { X = x, Y = y });
                         }
                     }
                 }
@@ -257,7 +258,7 @@ namespace TicTacDumb
         private static Move BestMove(char[,] board, List<Move> validMoves)
         {
             var key = ToString(board);
-            for (int i = 0; i < 4; i++)
+            for (int f = 0; f < 4; f++)
             {
                 if (_memory.ContainsKey(key))
                     break;
@@ -287,17 +288,19 @@ namespace TicTacDumb
 
         private static bool HasVictory(char[,] board, char player)
         {
+            var tmp = ToString(board);
+
             var tmpBoard = FlipBoard(board);
-            for (int j = 0; j < 4; j++)
+            for (int f = 0; f < 4; f++)
             {
                 if (tmpBoard[0, 0] == player && tmpBoard[1, 1] == player && tmpBoard[2, 2] == player)
                 {
                     return true;
                 }
 
-                for (int i = 0; i < 3; i++)
+                for (int y = 0; y < 3; y++)
                 {
-                    if (tmpBoard[i, 0] == player && tmpBoard[i, 1] == player && tmpBoard[i, 2] == player)
+                    if (tmpBoard[y, 0] == player && tmpBoard[y, 1] == player && tmpBoard[y, 2] == player)
                     {
                         return true;
                     }
@@ -312,11 +315,11 @@ namespace TicTacDumb
         private static char[,] NewBoard()
         {
             var board = new char[3, 3];
-            for (int i = 0; i < 3; i++)
+            for (int x = 0; x < 3; x++)
             {
-                for (int j = 0; j < 3; j++)
+                for (int y = 0; y < 3; y++)
                 {
-                    board[i, j] = '-';
+                    board[y, x] = '-';
                 }
             }
             return board;
@@ -350,11 +353,11 @@ namespace TicTacDumb
 
         private static bool AreEqual(char[,] left, char[,] right)
         {
-            for (int i = 0; i < 3; i++)
+            for (int x = 0; x < 3; x++)
             {
-                for (int j = 0; j < 3; j++)
+                for (int y = 0; y < 3; y++)
                 {
-                    if (left[i, j] != right[i, j])
+                    if (left[y, x] != right[y, x])
                         return false;
                 }
             }
@@ -364,11 +367,11 @@ namespace TicTacDumb
         private static string ToString(char[,] board)
         {
             string result = "";
-            for (int i = 0; i < 3; i++)
+            for (int y = 0; y < 3; y++)
             {
-                for (int j = 0; j < 3; j++)
+                for (int x = 0; x < 3; x++)
                 {
-                    result += board[j, i];
+                    result += board[y, x];
                 }
             }
             return result;
