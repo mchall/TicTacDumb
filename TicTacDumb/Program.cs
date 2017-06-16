@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -163,13 +164,13 @@ namespace TicTacDumb
                 var board = move.Board;
                 for (int i = 0; i < 4; i++)
                 {
-                    if (_memory.ContainsKey(move.Board))
+                    if (_memory.ContainsKey(board))
                         break;
-                    //board = FlipBoard(board);
+                    board = FlipBoard(board);
                 }
 
-                if (!_memory.ContainsKey(move.Board))
-                    _memory[move.Board] = new List<Move>();
+                if (!_memory.ContainsKey(board))
+                    _memory[board] = new List<Move>();
 
                 var isLastMove = move == history.Last();
 
@@ -177,24 +178,24 @@ namespace TicTacDumb
                 switch (outcome)
                 {
                     case Outcome.Player1Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? 50 : 5) : (isLastMove ? -100 : 0);
+                        scoreAlteration = isPlayer1 ? (isLastMove ? 100 : 2) : (isLastMove ? -100 : 0);
                         break;
                     case Outcome.Player2Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? -100 : 0) : (isLastMove ? 50 : 5);
+                        scoreAlteration = isPlayer1 ? (isLastMove ? -100 : 0) : (isLastMove ? 100 : 2);
                         break;
                     case Outcome.Tied:
-                        scoreAlteration = 1;
+                        scoreAlteration = 0;
                         break;
                 }
 
-                if (_memory[move.Board].Contains(move))
+                if (_memory[board].Contains(move))
                 {
-                    _memory[move.Board].Find(m => m.Equals(move)).Score += scoreAlteration;
+                    _memory[board].Find(m => m.Equals(move)).Score += scoreAlteration;
                 }
                 else
                 {
                     move.Score = scoreAlteration;
-                    _memory[move.Board].Add(move);
+                    _memory[board].Add(move);
                 }
             }
         }
@@ -256,6 +257,13 @@ namespace TicTacDumb
         private static Move BestMove(char[,] board, List<Move> validMoves)
         {
             var key = ToString(board);
+            for (int i = 0; i < 4; i++)
+            {
+                if (_memory.ContainsKey(key))
+                    break;
+                key = FlipBoard(key);
+            }
+
             var currentMemory = _memory.ContainsKey(key) ? _memory[key] : new List<Move>();
 
             List<Move> memoryMoves = new List<Move>();
