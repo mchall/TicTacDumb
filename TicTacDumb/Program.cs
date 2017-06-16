@@ -50,9 +50,9 @@ namespace TicTacDumb
 
         static void Main(string[] args)
         {
-            LoadMemory();
-            //Train();
-            PlayFromMemory();
+            //LoadMemory();
+            Train();
+            //PlayFromMemory();
         }
 
         private static void LoadMemory()
@@ -76,7 +76,7 @@ namespace TicTacDumb
 
                 while (true)
                 {
-                    NextMove(board, 'x', trainingPercentage: 0);
+                    NextMove(board, 'x', trainingPercentage: 1);
 
                     if (HasVictory(board, 'x'))
                     {
@@ -84,7 +84,7 @@ namespace TicTacDumb
                         break;
                     }
 
-                    NextMove(board, 'o', trainingPercentage: 1);
+                    NextMove(board, 'o', trainingPercentage: 0);
 
                     if (HasVictory(board, 'o'))
                     {
@@ -169,10 +169,10 @@ namespace TicTacDumb
                 switch (outcome)
                 {
                     case Outcome.Player1Won:
-                        scoreAlteration = isPlayer1 ? 2 : (isLastMove ? -10 : 0);
+                        scoreAlteration = isPlayer1 ? (isLastMove ? 50 : 5) : (isLastMove ? -100 : 0);
                         break;
                     case Outcome.Player2Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? -10 : 0) : 2;
+                        scoreAlteration = isPlayer1 ? (isLastMove ? -100 : 0) : (isLastMove ? 50 : 5);
                         break;
                     case Outcome.Tied:
                         scoreAlteration = 1;
@@ -210,7 +210,6 @@ namespace TicTacDumb
         {
             if (MovesLeft(board) > 0)
             {
-                string boardKey = ToString(board);
                 List<Move> moves = new List<Move>();
 
                 for (int i = 0; i < 3; i++)
@@ -219,7 +218,7 @@ namespace TicTacDumb
                     {
                         if (board[i, j] == '-')
                         {
-                            moves.Add(new Move() { Board = boardKey, X = i, Y = j });
+                            moves.Add(new Move() { X = j, Y = i });
                         }
                     }
                 }
@@ -239,9 +238,10 @@ namespace TicTacDumb
 
                 if (history != null)
                 {
+                    nextMove.Board = ToString(board);
                     history.Add(nextMove);
                 }
-                board[nextMove.X, nextMove.Y] = player;
+                board[nextMove.Y, nextMove.X] = player;
             }
         }
 
@@ -251,8 +251,6 @@ namespace TicTacDumb
             var currentMemory = _memory.ContainsKey(key) ? _memory[key] : new List<Move>();
 
             List<Move> memoryMoves = new List<Move>();
-
-
             foreach (var move in validMoves)
             {
                 if (currentMemory.Contains(move))
