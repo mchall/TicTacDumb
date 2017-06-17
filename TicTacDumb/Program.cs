@@ -51,9 +51,9 @@ namespace TicTacDumb
 
         static void Main(string[] args)
         {
-            //LoadMemory();
-            Train();
-            //PlayFromMemory();
+            LoadMemory();
+            //Train();
+            PlayFromMemory();
         }
 
         private static void PlayFromMemory()
