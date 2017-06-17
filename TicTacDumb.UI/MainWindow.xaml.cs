@@ -9,15 +9,32 @@ namespace TicTacDumb.UI
     /// </summary>
     public partial class MainWindow : Window
     {
-        public char _player;
-        public char _opponent;
         public char[,] _board;
         public bool _isPlayable;
+        public bool _isPlayer1;
+
+        public char PlayerSymbol
+        {
+            get
+            {
+                return _isPlayer1 ? 'x' : 'o';
+            }
+        }
+
+        public char OpponentSymbol
+        {
+            get
+            {
+                return _isPlayer1 ? 'o' : 'x';
+            }
+        }
 
         public MainWindow()
         {
             InitializeComponent();
             Memory.LoadMemory();
+            _isPlayer1 = true;
+            NewGame();
         }
 
         private void NewGame()
@@ -75,21 +92,21 @@ namespace TicTacDumb.UI
         {
             if (_board[y, x] == '-')
             {
-                _board[y, x] = _player;
+                _board[y, x] = PlayerSymbol;
 
-                if (BoardHelpers.HasVictory(_board, _player))
+                if (BoardHelpers.HasVictory(_board, PlayerSymbol))
                 {
-                    lblResult.Text = "-- PLAYER 1 WON --";
+                    lblResult.Text = "-- HUMAN WON --";
                     RegenerateBoard();
                     _isPlayable = false;
                     return;
                 }
 
-                Learning.Think(_board, _opponent);
+                Learning.Think(_board, OpponentSymbol);
 
-                if (BoardHelpers.HasVictory(_board, _player))
+                if (BoardHelpers.HasVictory(_board, OpponentSymbol))
                 {
-                    lblResult.Text = "-- PLAYER 2 WON --";
+                    lblResult.Text = "-- COMPUTER WON --";
                     RegenerateBoard();
                     _isPlayable = false;
                     return;
@@ -122,31 +139,16 @@ namespace TicTacDumb.UI
             btn22.Content = _board[2, 2];
         }
 
-        private void Player1_Click(object sender, RoutedEventArgs e)
-        {
-            NewGame();
-            _player = 'x';
-            _opponent = 'o';
-            GameGrid.Visibility = Visibility.Visible;
-            SelectionGrid.Visibility = Visibility.Collapsed;
-        }
-
-        private void Player2_Click(object sender, RoutedEventArgs e)
-        {
-            NewGame();
-            _player = 'o';
-            _opponent = 'x';
-            GameGrid.Visibility = Visibility.Visible;
-            SelectionGrid.Visibility = Visibility.Collapsed;
-
-            Learning.Think(_board, _opponent);
-            RegenerateBoard();
-        }
-
         private void Reset_Click(object sender, RoutedEventArgs e)
         {
-            GameGrid.Visibility = Visibility.Collapsed;
-            SelectionGrid.Visibility = Visibility.Visible;
+            NewGame();
+            _isPlayer1 = !_isPlayer1;
+
+            if (!_isPlayer1)
+            {
+                Learning.Think(_board, OpponentSymbol);
+            }
+            RegenerateBoard();
         }
     }
 }
