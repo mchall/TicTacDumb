@@ -25,7 +25,7 @@ namespace TicTacDumb
 
             public int X { get; set; }
             public int Y { get; set; }
-            public int Score { get; set; }
+            public long Score { get; set; }
 
             public override string ToString()
             {
@@ -46,7 +46,7 @@ namespace TicTacDumb
             }
         }
 
-        private static Dictionary<string, List<Move>> _memory = new Dictionary<string, List<Move>>();
+        private static ConcurrentDictionary<string, List<Move>> _memory = new ConcurrentDictionary<string, List<Move>>();
         private static Random _rand = new Random();
 
         static void Main(string[] args)
@@ -54,12 +54,6 @@ namespace TicTacDumb
             //LoadMemory();
             Train();
             //PlayFromMemory();
-        }
-
-        private static void LoadMemory()
-        {
-            var memoryText = File.ReadAllText("memory.json");
-            _memory = JsonConvert.DeserializeObject<Dictionary<string, List<Move>>>(memoryText);
         }
 
         private static void PlayFromMemory()
@@ -70,7 +64,7 @@ namespace TicTacDumb
             int p1 = 0;
             int p2 = 0;
 
-            for (int i = 0; i < totalGames; i++)
+            Parallel.For(0, totalGames, i =>
             {
                 var board = NewBoard();
 
@@ -98,7 +92,7 @@ namespace TicTacDumb
                         break;
                     }
                 }
-            }
+            });
 
             Console.WriteLine($"Player 1 Won: { p1 } times");
             Console.WriteLine($"Player 2 Won: { p2 } times");
@@ -109,18 +103,16 @@ namespace TicTacDumb
         private static void Train()
         {
             int totalGames = 10000000;
-
-            for (int i = 0; i < totalGames; i++)
+            Parallel.For(0, totalGames, i =>
             {
                 var board = NewBoard();
 
-                var player1History = new List<Move>();
-                var player2History = new List<Move>();
+                var history = new List<Move>();
                 var outcome = Outcome.Tied;
 
                 while (true)
                 {
-                    NextMove(board, 'x', player1History, 1);
+                    NextMove(board, 'x', history, 1);
 
                     if (HasVictory(board, 'x'))
                     {
@@ -128,7 +120,7 @@ namespace TicTacDumb
                         break;
                     }
 
-                    NextMove(board, 'o', player2History, 1);
+                    NextMove(board, 'o', history, 1);
 
                     if (HasVictory(board, 'o'))
                     {
@@ -143,63 +135,101 @@ namespace TicTacDumb
                     }
                 }
 
-                RememberMoves(player1History, outcome, true);
-                RememberMoves(player2History, outcome, false);
-            }
+                RememberMoves(history, outcome);
+            });
 
             SaveMemory();
         }
 
+        private static void FlattenMemory()
+        {
+            ConcurrentDictionary<string, List<Move>> flat = new ConcurrentDictionary<string, List<Move>>();
+
+            foreach (var kvp in _memory)
+            {
+                int numFlips = 0;
+                string board = kvp.Key;
+                for (int f = 0; f < 3; f++)
+                {
+                    if (flat.ContainsKey(board))
+                        break;
+                    board = FlipBoard(board);
+                    numFlips++;
+                }
+
+                var flippedMoves = kvp.Value.ConvertAll(m => FlipMove(m, numFlips));
+
+                if (!flat.ContainsKey(board))
+                    flat[board] = new List<Move>();
+
+                foreach (var move in flippedMoves)
+                {
+                    var found = flat[board].FirstOrDefault(m => m.Equals(move));
+                    if (found != null)
+                        found.Score += move.Score;
+                    else
+                        flat[board].Add(move);
+                }
+            }
+
+            _memory = flat;
+        }
+
+        private static void LoadMemory()
+        {
+            var memoryText = File.ReadAllText("memory.json");
+            _memory = JsonConvert.DeserializeObject<ConcurrentDictionary<string, List<Move>>>(memoryText);
+        }
+
         private static void SaveMemory()
         {
+            FlattenMemory();
             var str = JsonConvert.SerializeObject(_memory);
             File.WriteAllText("memory.json", str);
         }
 
-        private static void RememberMoves(List<Move> history, Outcome outcome, bool isPlayer1)
+        private static void RememberMoves(List<Move> history, Outcome outcome)
         {
+            Move prevMove;
+            bool isPlayer1 = false;
             foreach (var move in history)
             {
-                var board = move.Board;
-                var flippedMove = move;
-                for (int f = 0; f < 3; f++)
-                {
-                    if (_memory.ContainsKey(board))
-                        break;
-                    board = FlipBoard(board);
-                    flippedMove = FlipMove(flippedMove);
-                }
+                isPlayer1 = !isPlayer1;
 
-                if (!_memory.ContainsKey(board))
-                    _memory[board] = new List<Move>();
+                if (!_memory.ContainsKey(move.Board))
+                    _memory[move.Board] = new List<Move>();
 
                 var isLastMove = move == history.Last();
 
-                //todo: if last move already negative, need to go back 1 (if all paths negative, mark path as bad??)
-
                 int scoreAlteration = 0;
-                switch (outcome)
+                if (isLastMove && (outcome == Outcome.Player1Won || outcome == Outcome.Player2Won))
                 {
-                    case Outcome.Player1Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? 100 : 2) : (isLastMove ? -100 : -1);
-                        break;
-                    case Outcome.Player2Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? -100 : -1) : (isLastMove ? 100 : 2);
-                        break;
-                    case Outcome.Tied:
-                        scoreAlteration = 1;
-                        break;
+                    scoreAlteration = 1000;
                 }
-
-                if (_memory[board].Contains(flippedMove))
+                else if ((outcome == Outcome.Player1Won && isPlayer1) || (outcome == Outcome.Player2Won && !isPlayer1))
                 {
-                    _memory[board].Find(m => m.Equals(flippedMove)).Score += scoreAlteration;
+                    scoreAlteration = 2;
+                }
+                else if (isLastMove && outcome == Outcome.Tied)
+                {
+                    scoreAlteration = 1;
                 }
                 else
                 {
-                    flippedMove.Score = scoreAlteration;
-                    _memory[board].Add(flippedMove);
+                    scoreAlteration = 0;
                 }
+
+                if (_memory[move.Board].Contains(move))
+                {
+                    _memory[move.Board].Find(m => m.Equals(move)).Score += scoreAlteration;
+                }
+                else
+                {
+                    move.Score = scoreAlteration;
+                    _memory[move.Board].Add(move);
+                }
+
+                prevMove = move;
             }
         }
 
@@ -369,6 +399,8 @@ namespace TicTacDumb
                 case 1: newMove.Y = 1; break;
                 case 2: newMove.Y = 0; break;
             }
+            newMove.Score = input.Score;
+            newMove.Board = !string.IsNullOrEmpty(input.Board) ? FlipBoard(input.Board) : null;
 
             return FlipMove(newMove, numFlips - 1);
         }
