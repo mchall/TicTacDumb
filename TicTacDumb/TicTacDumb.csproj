@@ -46,6 +46,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BoardHelpers.cs" />
+    <Compile Include="Memory.cs" />
+    <Compile Include="Move.cs" />
+    <Compile Include="Learning.cs" />
+    <Compile Include="Outcome.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
