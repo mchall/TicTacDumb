@@ -108,7 +108,7 @@ namespace TicTacDumb
 
         private static void Train()
         {
-            int totalGames = 1000000;
+            int totalGames = 10000000;
 
             for (int i = 0; i < totalGames; i++)
             {
@@ -161,11 +161,13 @@ namespace TicTacDumb
             foreach (var move in history)
             {
                 var board = move.Board;
-                for (int i = 0; i < 4; i++)
+                var flippedMove = move;
+                for (int f = 0; f < 3; f++)
                 {
                     if (_memory.ContainsKey(board))
                         break;
                     board = FlipBoard(board);
+                    flippedMove = FlipMove(flippedMove);
                 }
 
                 if (!_memory.ContainsKey(board))
@@ -179,24 +181,24 @@ namespace TicTacDumb
                 switch (outcome)
                 {
                     case Outcome.Player1Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? 100 : 2) : (isLastMove ? -100 : 0);
+                        scoreAlteration = isPlayer1 ? (isLastMove ? 100 : 2) : (isLastMove ? -100 : -1);
                         break;
                     case Outcome.Player2Won:
-                        scoreAlteration = isPlayer1 ? (isLastMove ? -100 : 0) : (isLastMove ? 100 : 2);
+                        scoreAlteration = isPlayer1 ? (isLastMove ? -100 : -1) : (isLastMove ? 100 : 2);
                         break;
                     case Outcome.Tied:
-                        scoreAlteration = 0;
+                        scoreAlteration = 1;
                         break;
                 }
 
-                if (_memory[board].Contains(move))
+                if (_memory[board].Contains(flippedMove))
                 {
-                    _memory[board].Find(m => m.Equals(move)).Score += scoreAlteration;
+                    _memory[board].Find(m => m.Equals(flippedMove)).Score += scoreAlteration;
                 }
                 else
                 {
-                    move.Score = scoreAlteration;
-                    _memory[board].Add(move);
+                    flippedMove.Score = scoreAlteration;
+                    _memory[board].Add(flippedMove);
                 }
             }
         }
@@ -257,12 +259,14 @@ namespace TicTacDumb
 
         private static Move BestMove(char[,] board, List<Move> validMoves)
         {
+            int numFlips = 0;
             var key = ToString(board);
             for (int f = 0; f < 4; f++)
             {
                 if (_memory.ContainsKey(key))
                     break;
                 key = FlipBoard(key);
+                numFlips++;
             }
 
             var currentMemory = _memory.ContainsKey(key) ? _memory[key] : new List<Move>();
@@ -270,14 +274,23 @@ namespace TicTacDumb
             List<Move> memoryMoves = new List<Move>();
             foreach (var move in validMoves)
             {
-                if (currentMemory.Contains(move))
+                var flip = FlipMove(move, numFlips);
+
+                if (currentMemory.Contains(flip))
                 {
-                    memoryMoves.Add(currentMemory.Find(m => m.Equals(move)));
+                    memoryMoves.Add(currentMemory.Find(m => m.Equals(flip)));
                 }
             }
 
             var maxScore = memoryMoves.Max(m => m.Score);
-            return memoryMoves.First(m => m.Score == maxScore);
+            var bestMove = memoryMoves.First(m => m.Score == maxScore);
+
+            if (numFlips > 0)
+            {
+                bestMove = FlipMove(bestMove, 4 - numFlips);
+            }
+
+            return bestMove;
         }
 
         private static int MovesLeft(char[,] board)
@@ -340,6 +353,24 @@ namespace TicTacDumb
             newBoard[2, 2] = input[0, 2];
 
             return newBoard;
+        }
+
+        private static Move FlipMove(Move input, int numFlips = 0)
+        {
+            if (numFlips == 0)
+                return input;
+
+            var newMove = new Move();
+
+            newMove.X = input.Y;
+            switch (input.X)
+            {
+                case 0: newMove.Y = 2; break;
+                case 1: newMove.Y = 1; break;
+                case 2: newMove.Y = 0; break;
+            }
+
+            return FlipMove(newMove, numFlips - 1);
         }
 
         private static string FlipBoard(string input)
