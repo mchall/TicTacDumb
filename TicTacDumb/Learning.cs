@@ -56,6 +56,11 @@ namespace TicTacDumb
             Console.Read();
         }
 
+        public static void Think(char[,] board, char player)
+        {
+            NextMove(board, player);
+        }
+
         public static void Train()
         {
             int totalGames = 10000000;
