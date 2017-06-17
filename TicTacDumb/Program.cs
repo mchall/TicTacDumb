@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TicTacDumb
@@ -68,27 +69,29 @@ namespace TicTacDumb
             {
                 var board = NewBoard();
 
+                var history = new List<Move>();
+
                 while (true)
                 {
-                    NextMove(board, 'x', trainingPercentage: 0);
+                    NextMove(board, 'x', history, 1);
 
                     if (HasVictory(board, 'x'))
                     {
-                        p1++;
+                        Interlocked.Increment(ref p1);
                         break;
                     }
 
-                    NextMove(board, 'o', trainingPercentage: 1);
+                    NextMove(board, 'o', history, 0);
 
                     if (HasVictory(board, 'o'))
                     {
-                        p2++;
+                        Interlocked.Increment(ref p2);
                         break;
                     }
 
                     if (MovesLeft(board) == 0)
                     {
-                        tied++;
+                        Interlocked.Increment(ref tied);
                         break;
                     }
                 }
@@ -103,6 +106,8 @@ namespace TicTacDumb
         private static void Train()
         {
             int totalGames = 10000000;
+
+            //for(int i=0;i<totalGames;i++)
             Parallel.For(0, totalGames, i =>
             {
                 var board = NewBoard();
@@ -190,7 +195,7 @@ namespace TicTacDumb
 
         private static void RememberMoves(List<Move> history, Outcome outcome)
         {
-            Move prevMove;
+            Move prevMove = null;
             bool isPlayer1 = false;
             foreach (var move in history)
             {
@@ -205,6 +210,19 @@ namespace TicTacDumb
                 if (isLastMove && (outcome == Outcome.Player1Won || outcome == Outcome.Player2Won))
                 {
                     scoreAlteration = 1000;
+
+                    if (prevMove != null)
+                    {
+                        _memory[prevMove.Board].Find(m => m.Equals(prevMove)).Score = -100000;
+                        if (_memory[prevMove.Board].Contains(move))
+                        {
+                            _memory[prevMove.Board].Find(m => m.Equals(move)).Score += scoreAlteration;
+                        }
+                        else
+                        {
+                            _memory[prevMove.Board].Add(new Move() { Score = scoreAlteration, X = move.X, Y = move.Y });
+                        }
+                    }
                 }
                 else if ((outcome == Outcome.Player1Won && isPlayer1) || (outcome == Outcome.Player2Won && !isPlayer1))
                 {
